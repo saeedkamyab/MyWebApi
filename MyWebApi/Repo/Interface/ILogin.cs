@@ -2,6 +2,6 @@
 {
     public interface ILogin
     {
-        bool Login(string userName, string pass);
+        string Login(LoginViewModel loginModel);
     }
 }

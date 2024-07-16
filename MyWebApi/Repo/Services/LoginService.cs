@@ -1,5 +1,10 @@
-﻿using MyWebApi.Models;
+﻿using Microsoft.IdentityModel.Tokens;
+using MyWebApi.Models;
 using MyWebApi.Repo.Interface;
+using System.Diagnostics.Eventing.Reader;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 namespace MyWebApi.Repo.Services
 {
@@ -12,17 +17,30 @@ namespace MyWebApi.Repo.Services
             _context = context;
         }
 
-        public bool Login(string userName, string pass)
+        public string Login(LoginViewModel loginModel)
         {
-            if (!string.IsNullOrWhiteSpace(userName) && !string.IsNullOrWhiteSpace(pass))
+            if (loginModel != null)
             {
-                var user = _context.Users.Where(u => u.UserName == userName & u.Password == pass);
+                var user = _context.Users.Where(u => u.UserName == loginModel.UserName & u.Password == loginModel.Password);
                 if (user.Count() > 0)
                 {
-                    return true;
+                    var secretKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("this is my custom Secret key for authentication"));
+                    var signinCredential = new SigningCredentials(secretKey, SecurityAlgorithms.HmacSha256);
+                    var tokenOption = new JwtSecurityToken(
+                        issuer: "https://localhost:7264",
+                        claims: new List<Claim>
+                        {
+                            new Claim(ClaimTypes.Name,loginModel.UserName),
+                            new Claim(ClaimTypes.Role,"Admin")
+                        },
+                        expires:DateTime.Now.AddMinutes(30),
+                        signingCredentials:signinCredential
+                        );
+                    var token = new JwtSecurityTokenHandler().WriteToken(tokenOption);
+                    return token;
                 }
             }
-            return false;
+            return null;
         }
     }
 }
